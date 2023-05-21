@@ -87,7 +87,7 @@ class RotateController extends Controller {
 
 	rotate(rotateStart, rotateEnd) {
 
-		this.rotateX(rotateEnd[0] - rotateStart[0]);
+		this.rotateX(-(rotateEnd[0] - rotateStart[0]));
 		this.rotateY(rotateEnd[1] - rotateStart[1]);
 
 		rotateStart[0] = rotateEnd[0];

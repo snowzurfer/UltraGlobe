@@ -93,7 +93,7 @@ class PanController extends Controller {
         tempPointC.copy(this.mouseRayCast);
         //this.calculateMouseLocationOnPlanet(this.mouseDownLocation[0], this.mouseDownLocation[1], tempPointC);
         tempPointA.copy(this.camera.position).sub(this.planet.position).normalize();
-        pointer1 = tempPointC.distanceTo(this.camera.position) * 0.002;
+        pointer1 = tempPointC.distanceTo(this.camera.position) * 0.0015;
         pointer2 = (this.mouseLatest[0] - this.mouseDownLocation[0]) * pointer1;
         pointer3 = (this.mouseLatest[1] - this.mouseDownLocation[1]) * pointer1;
 
