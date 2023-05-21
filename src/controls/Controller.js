@@ -15,8 +15,10 @@ class Controller {
         }
 	}
 
-    _handleEvent(){
-        if (!!self.next) { self.next._handleEvent(eventName, e); }
+    _handleEvent(eventName, e){
+        if (this.next && typeof this.next._handleEvent === 'function') {
+            this.next._handleEvent(eventName, e);
+        }
     }
 
     update(){
