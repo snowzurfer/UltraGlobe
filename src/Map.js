@@ -24,7 +24,6 @@ const depth16 = new THREE.Vector2();
 const unpacker = new THREE.Vector2(1, 1 / 256);
 const A = new THREE.Vector3();
 const B = new THREE.Vector3();
-const tempVec2 = new THREE.Vector2();
 const loader = new THREE.TextureLoader();
 const degreeToRadians = Math.PI / 180;
 
@@ -49,6 +48,8 @@ class Map {
         }
         this.camera = !!properties.camera ? properties.camera : this.initCamera();
         this.resetLogDepthBuffer();
+        this.selectController = null;
+        this.animateCallback = null;
 
         if(properties.debug){
             this.initStats();
@@ -57,6 +58,7 @@ class Map {
         this.initPlanet();
         this.initController();
         this.scene.add(this.planet);
+        //this.initStats();
         this.setupRenderTarget();
         this.setupPost();
         this.initLabelRenderer();
@@ -68,8 +70,6 @@ class Map {
         this.raycaster = new THREE.Raycaster();
 
         this.selection = {};
-
-        this.animateCallback = null;
     }
 
     setLayer(layer, index) {
@@ -250,7 +250,7 @@ class Map {
         camera.up.set(0, 0, 1)
         camera.lookAt(new THREE.Vector3(-0, 0, 10000));
         camera.updateProjectionMatrix();
-        
+
         return camera;
     }
 
@@ -271,7 +271,8 @@ class Map {
     initController() {
         const self = this;
         self.controller = new Controller(self.camera, self.domContainer, self);
-        self.controller.append(new SelectController(self.camera, self.domContainer, self));
+        self.selectController = new SelectController(self.camera, self.domContainer, self)
+        self.controller.append(self.selectController);
         self.controller.append(new PanController(self.camera, self.domContainer, self));
         self.controller.append(new RotateController(self.camera, self.domContainer, self));
         self.controller.append(new ZoomController(self.camera, self.domContainer, self));
@@ -369,9 +370,9 @@ class Map {
                 self.postMaterial.uniforms.up.value = self.camera.up.normalize();
                 self.postMaterial.uniforms.right.value.crossVectors(self.camera.up, self.postMaterial.uniforms.viewCenterFar.value);
                 self.postMaterial.uniforms.viewCenterFar.value.multiplyScalar(self.camera.far).add(self.camera.position);
-                
+
                 self.postMaterial.uniforms.heightAboveSeaLevel.value = self.camera.position.length() - 6356752.3142;
-                
+
                 
                 self.depthPassMaterial.uniforms.cameraNear.value = self.camera.near;
                 self.depthPassMaterial.uniforms.cameraFar.value = self.camera.far;
@@ -465,7 +466,7 @@ class Map {
         const clipSpacePosition = new THREE.Vector4(x, y, 0.0, 1.0);
         clipSpacePosition.applyMatrix4(this.camera.projectionMatrixInverse);
         const viewPosition = new THREE.Vector3(clipSpacePosition.x/clipSpacePosition.w, clipSpacePosition.y/clipSpacePosition.w, clipSpacePosition.z/clipSpacePosition.w);
-        
+
         viewPosition.normalize();
         viewPosition.multiplyScalar(z);
         viewPosition.applyMatrix4(this.camera.matrixWorld);
