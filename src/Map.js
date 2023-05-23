@@ -69,6 +69,7 @@ class Map {
 
         this.selection = {};
 
+        this.animateCallback = null;
     }
 
     setLayer(layer, index) {
@@ -305,6 +306,9 @@ class Map {
         self.domContainer.addEventListener('keyup', (e) => {
             if (!!self.controller && !self.pause) self.controller.event('keyup', e);
         }, false);
+        self.domContainer.addEventListener('pointermove', (e) => {
+            if (!!self.controller && !self.pause) self.controller.event('pointermove', e);
+        }, false);
 
         document.addEventListener("mouseleave", function (event) {
 
@@ -335,6 +339,7 @@ class Map {
             requestAnimationFrame(animate);
 
             if (!self.pause) {
+
                 self.controller.update();
 
                 frustum.setFromProjectionMatrix(mat.multiplyMatrices(self.camera.projectionMatrix, self.camera.matrixWorldInverse));
@@ -377,6 +382,8 @@ class Map {
                 self.renderer.setRenderTarget(null);
                 self.renderer.render(self.postScene, self.postCamera);
                 self.labelRenderer.render(self.scene, self.camera);
+
+                self.animateCallback?.();
             }
 
             if(self.stats){

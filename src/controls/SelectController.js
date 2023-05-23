@@ -6,6 +6,7 @@ class SelectController extends Controller {
         super(camera, domElement, map);
 
         this.selectCallback = null;
+        this.mousePosition = new THREE.Vector2();
     }
 
     _handleEvent(eventName, e) {
@@ -15,6 +16,7 @@ class SelectController extends Controller {
             case "mouseup": self.mouseUp(e); break;
             case "touchstart": self.touchStart(e); break;
 			case "touchend": self.touchEnd(e); break;
+            case "pointermove": self.pointerMove(e); break;
         }
         super._handleEvent(eventName, e);
     }
@@ -56,6 +58,10 @@ class SelectController extends Controller {
         }
     }
 
+    pointerMove(e) {
+        this.mousePosition.x = e.clientX;
+        this.mousePosition.y = e.clientY;
+    }
 
     select(mouseLocation){
 

@@ -66,7 +66,6 @@ class ZoomController extends Controller {
 	}
 
     mouseWheel(e) {
-        console.log("MouseWheel deltaY: " + e.deltaY, e);
         this.zoom += Math.sign(e.deltaY) * 0.3;
         this.zoomLocation = e;
         this.map.screenPixelRayCast(e.x, e.y, this.mouseRayCast);
