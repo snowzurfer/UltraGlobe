@@ -2,8 +2,8 @@ lockfileVersion: '6.0'
 
 dependencies:
   '@jdultra/threedtiles':
-    specifier: 9.1.8
-    version: 9.1.8(three@0.152.2)
+    specifier: 9.1.10
+    version: 9.1.10(three@0.152.2)
   epsg-index:
     specifier: ^1.0.0
     version: 1.0.0
@@ -1232,8 +1232,8 @@ packages:
     resolution: {integrity: sha512-k2Ty1JcVojjJFwrg/ThKi2ujJ7XNLYaFGNB/bWT9wGR+oSMJHMa5w+CUq6p/pVrKeNNgA7pCqEcjSnHVoqJQFw==}
     dev: true
 
-  /@jdultra/threedtiles@9.1.8(three@0.152.2):
-    resolution: {integrity: sha512-FEDH3TT5svh6qCZjAgkSb5NjlNZ1BEkwlU9s3UpD6HotYH+bHXipvU4/Qz0dyTLJs8QvfE7d9/nzvrwWQYksIw==}
+  /@jdultra/threedtiles@9.1.10(three@0.152.2):
+    resolution: {integrity: sha512-Qo/Q+pzzDFnHiVRP73yA2vItyspQr2I8orRo+GwYL11iOCflA+yrEBWHgACfgmIpnXPc4bFtGBAapCf6ArHBOg==}
     peerDependencies:
       three: ^0.152.0
     dependencies:
