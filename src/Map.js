@@ -37,34 +37,34 @@ class Map {
      *        } properties
      */
     constructor(properties) {
-        this.layerManager = new LayerManager();
-        this.scene = !!properties.scene ? properties.scene : this.initScene();
-        if (!!properties.domContainer) {
-            this.domContainer = properties.domContainer;
-        } else if (!!properties.divID) {
-            this.domContainer = document.getElementById(properties.divID);
-        } else {
-            throw "cannot create Map without a domContainer or divID"
+        if (!properties.camera || !properties.scene || !properties.renderer) {
+            throw "cannot create Map without a camera, scene and WebGL renderer"
         }
-        this.camera = !!properties.camera ? properties.camera : this.initCamera();
-        this.resetLogDepthBuffer();
+
+        this.layerManager = new LayerManager();
+        this.scene = properties.scene;
+        this.renderer = properties.renderer;
+        this.domContainer = properties.renderer.domElement;
+        this.camera = properties.camera;
+        // this.resetLogDepthBuffer();
         this.selectController = null;
         this.animateCallback = null;
 
-        if(properties.debug){
-            this.initStats();
-        }
+        // if(properties.debug){
+        //     this.initStats();
+        // }
 
         this.initPlanet();
         this.initController();
         this.scene.add(this.planet);
+        console.log("DBS Added planet")
         //this.initStats();
-        this.setupRenderTarget();
-        this.setupPost();
-        this.initLabelRenderer();
-        this.initRenderer();
+        // this.setupRenderTarget();
+        // this.setupPost();
+        // this.initLabelRenderer();
+        // this.initRenderer();
 
-        this.startAnimation();
+        // this.startAnimation();
         this.mapNavigator = new MapNavigator(this);
 
         this.raycaster = new THREE.Raycaster();
@@ -100,143 +100,143 @@ class Map {
     getLayers() {
         return this.layerManager.getLayers();
     }
-    initScene() {
-        const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x000000);
-        scene.add(new THREE.AmbientLight(0xFFFFFF, 1.0));
-        return scene;
-    }
+    // initScene() {
+    //     const scene = new THREE.Scene();
+    //     scene.background = new THREE.Color(0x000000);
+    //     scene.add(new THREE.AmbientLight(0xFFFFFF, 1.0));
+    //     return scene;
+    // }
 
-    setupRenderTarget() {
+    // setupRenderTarget() {
 
-        if (this.target) this.target.dispose();
+    //     if (this.target) this.target.dispose();
 
-        this.target = new THREE.WebGLRenderTarget(this.domContainer.offsetWidth, this.domContainer.offsetHeight);
-        this.target.texture.format = THREE.RGBAFormat;
-        this.target.texture.encoding = THREE.LinearEncoding;
-        this.target.texture.minFilter = THREE.LinearFilter;
-        this.target.texture.magFilter = THREE.LinearFilter;
-        this.target.texture.generateMipmaps = false;
-        this.target.stencilBuffer = false;
-        this.target.depthBuffer = true;
-        this.target.depthTexture = new THREE.DepthTexture();
-        this.target.depthTexture.format = THREE.DepthFormat;
-        this.target.depthTexture.type = THREE.UnsignedShortType;
+    //     this.target = new THREE.WebGLRenderTarget(this.domContainer.offsetWidth, this.domContainer.offsetHeight);
+    //     this.target.texture.format = THREE.RGBAFormat;
+    //     this.target.texture.encoding = THREE.LinearEncoding;
+    //     this.target.texture.minFilter = THREE.LinearFilter;
+    //     this.target.texture.magFilter = THREE.LinearFilter;
+    //     this.target.texture.generateMipmaps = false;
+    //     this.target.stencilBuffer = false;
+    //     this.target.depthBuffer = true;
+    //     this.target.depthTexture = new THREE.DepthTexture();
+    //     this.target.depthTexture.format = THREE.DepthFormat;
+    //     this.target.depthTexture.type = THREE.UnsignedShortType;
 
-        // the depth render target is used to render depth to the main texture so that it can read retrieved on the CPU
-        if (this.depthTarget) this.depthTarget.dispose();
+    //     // the depth render target is used to render depth to the main texture so that it can read retrieved on the CPU
+    //     if (this.depthTarget) this.depthTarget.dispose();
 
-        this.depthTarget = new THREE.WebGLRenderTarget(this.domContainer.offsetWidth, this.domContainer.offsetHeight);
-        this.depthTarget.texture.format = THREE.RGBAFormat;
-        this.depthTarget.texture.minFilter = THREE.NearestFilter;
-        this.depthTarget.texture.magFilter = THREE.NearestFilter;
-        this.depthTarget.texture.generateMipmaps = false;
-        this.depthTarget.stencilBuffer = false;
-        this.depthTarget.depthBuffer = false;
-    }
-
-
-    setupPost() {
-
-        // Setup post processing stage
-        const self = this;
-        this.postCamera = new THREE.OrthographicCamera(- 1, 1, 1, - 1, 0, 1);
-        this.postMaterial = new THREE.ShaderMaterial({
-            vertexShader: PostShader.vertexShader(),
-            fragmentShader: PostShader.fragmentShader(),
-            uniforms: {
-                cameraNear: { value: this.camera.near },
-                cameraFar: { value: this.camera.far },
-                tDiffuse: { value: null },
-                tDepth: { value: null },
-                radius: { value: 0 },
-                xfov: { value: 0 },
-                yfov: { value: 0 },
-                planetPosition: { value: new THREE.Vector3(0, 0, 0) },
-                nonPostCameraPosition: { value: new THREE.Vector3(0, 0, 0) },
-                viewCenterFar: { value: new THREE.Vector3(0, 0, 0) },
-                up: { value: new THREE.Vector3(0, 0, 0) },
-                right: { value: new THREE.Vector3(0, 0, 0) },
-                heightAboveSeaLevel: { value: 0 },
-                opticalDepth: { value: null },
-            }
-        });
-
-        loader.load(
-            // resource URL
-            opticalDepth,
-
-            // onLoad callback
-            function (texture) {
-                texture.wrapS = THREE.ClampToEdgeWrapping;
-                texture.wrapT = THREE.ClampToEdgeWrapping;
-                texture.magFilter = THREE.LinearFilter;
-                texture.minFilter = THREE.LinearFilter;
-                self.postMaterial.uniforms.opticalDepth.value = texture;
-            },
-            undefined,
-            function (err) {
-                console.error('An error happened: ' + err);
-            }
-        );
-
-        this.depthPassMaterial = new THREE.ShaderMaterial({
-            vertexShader: PostShader.vertexShader(),
-            fragmentShader: PostShader.depthPassFragmentShader(),
-            uniforms: {
-                cameraNear: { value: this.camera.near },
-                cameraFar: { value: this.camera.far },
-                tDepth: { value: null },
-            }
-        });
-        const postPlane = new THREE.PlaneGeometry(2, 2);
-        const postQuad = new THREE.Mesh(postPlane, this.postMaterial);
-        this.postScene = new THREE.Scene();
-        this.postScene.add(postQuad);
-
-        const depthPostQuad = new THREE.Mesh(postPlane, this.depthPassMaterial);
-        this.depthScene = new THREE.Scene();
-        this.depthScene.add(depthPostQuad);
-    }
-
-    initRenderer() {
-        let self = this;
-        self.renderer = new THREE.WebGLRenderer({ antialias: true, logarithmicDepthBuffer: true, stencil: false, preserveDrawingBuffer: false, powerPreference: "high-performance" });
-        //self.renderer.debug.checkShaderErrors = false;
-        self.renderer.setPixelRatio(window.devicePixelRatio);
-        self.renderer.setSize(this.domContainer.offsetWidth, this.domContainer.offsetHeight);
-
-        self.renderer.outputEncoding = THREE.LinearEncoding;
-        self.renderer.autoClear = false;
-        self.renderer.toneMapping = THREE.ReinhardToneMapping;
-        self.renderer.toneMappingExposure = 3.5;
-        self.renderer.domElement.style.overflow = "hidden";
-        self.domContainer.appendChild(self.renderer.domElement);
-
-        window.addEventListener('resize', onWindowResize);
-        function onWindowResize() {
-
-            const aspect = self.domContainer.offsetWidth / self.domContainer.offsetHeight;
-            self.camera.aspect = aspect;
-            self.camera.updateProjectionMatrix();
+    //     this.depthTarget = new THREE.WebGLRenderTarget(this.domContainer.offsetWidth, this.domContainer.offsetHeight);
+    //     this.depthTarget.texture.format = THREE.RGBAFormat;
+    //     this.depthTarget.texture.minFilter = THREE.NearestFilter;
+    //     this.depthTarget.texture.magFilter = THREE.NearestFilter;
+    //     this.depthTarget.texture.generateMipmaps = false;
+    //     this.depthTarget.stencilBuffer = false;
+    //     this.depthTarget.depthBuffer = false;
+    // }
 
 
-            self.target.setSize(self.domContainer.offsetWidth, self.domContainer.offsetHeight);
-            self.depthTarget.setSize(self.domContainer.offsetWidth, self.domContainer.offsetHeight);
-            self.renderer.setSize(self.domContainer.offsetWidth, self.domContainer.offsetHeight);
-            self.labelRenderer.setSize(self.domContainer.offsetWidth, self.domContainer.offsetHeight);
-        }
-        setTimeout(onWindowResize, 1000);
-    }
+    // setupPost() {
 
-    initLabelRenderer() {
-        this.labelRenderer = new CSS3DRenderer();
-        this.labelRenderer.setSize(this.domContainer.offsetWidth, this.domContainer.offsetHeight);
-        this.labelRenderer.domElement.style.position = 'absolute';
-        this.labelRenderer.domElement.style.top = '0px';
-        this.labelRenderer.domElement.style.pointerEvents = 'none';
-        document.body.appendChild(this.labelRenderer.domElement);
-    }
+    //     // Setup post processing stage
+    //     const self = this;
+    //     this.postCamera = new THREE.OrthographicCamera(- 1, 1, 1, - 1, 0, 1);
+    //     this.postMaterial = new THREE.ShaderMaterial({
+    //         vertexShader: PostShader.vertexShader(),
+    //         fragmentShader: PostShader.fragmentShader(),
+    //         uniforms: {
+    //             cameraNear: { value: this.camera.near },
+    //             cameraFar: { value: this.camera.far },
+    //             tDiffuse: { value: null },
+    //             tDepth: { value: null },
+    //             radius: { value: 0 },
+    //             xfov: { value: 0 },
+    //             yfov: { value: 0 },
+    //             planetPosition: { value: new THREE.Vector3(0, 0, 0) },
+    //             nonPostCameraPosition: { value: new THREE.Vector3(0, 0, 0) },
+    //             viewCenterFar: { value: new THREE.Vector3(0, 0, 0) },
+    //             up: { value: new THREE.Vector3(0, 0, 0) },
+    //             right: { value: new THREE.Vector3(0, 0, 0) },
+    //             heightAboveSeaLevel: { value: 0 },
+    //             opticalDepth: { value: null },
+    //         }
+    //     });
+
+    //     loader.load(
+    //         // resource URL
+    //         opticalDepth,
+
+    //         // onLoad callback
+    //         function (texture) {
+    //             texture.wrapS = THREE.ClampToEdgeWrapping;
+    //             texture.wrapT = THREE.ClampToEdgeWrapping;
+    //             texture.magFilter = THREE.LinearFilter;
+    //             texture.minFilter = THREE.LinearFilter;
+    //             self.postMaterial.uniforms.opticalDepth.value = texture;
+    //         },
+    //         undefined,
+    //         function (err) {
+    //             console.error('An error happened: ' + err);
+    //         }
+    //     );
+
+    //     this.depthPassMaterial = new THREE.ShaderMaterial({
+    //         vertexShader: PostShader.vertexShader(),
+    //         fragmentShader: PostShader.depthPassFragmentShader(),
+    //         uniforms: {
+    //             cameraNear: { value: this.camera.near },
+    //             cameraFar: { value: this.camera.far },
+    //             tDepth: { value: null },
+    //         }
+    //     });
+    //     const postPlane = new THREE.PlaneGeometry(2, 2);
+    //     const postQuad = new THREE.Mesh(postPlane, this.postMaterial);
+    //     this.postScene = new THREE.Scene();
+    //     this.postScene.add(postQuad);
+
+    //     const depthPostQuad = new THREE.Mesh(postPlane, this.depthPassMaterial);
+    //     this.depthScene = new THREE.Scene();
+    //     this.depthScene.add(depthPostQuad);
+    // }
+
+    // initRenderer() {
+    //     let self = this;
+    //     self.renderer = new THREE.WebGLRenderer({ antialias: true, logarithmicDepthBuffer: true, stencil: false, preserveDrawingBuffer: false, powerPreference: "high-performance" });
+    //     //self.renderer.debug.checkShaderErrors = false;
+    //     self.renderer.setPixelRatio(window.devicePixelRatio);
+    //     self.renderer.setSize(this.domContainer.offsetWidth, this.domContainer.offsetHeight);
+
+    //     self.renderer.outputEncoding = THREE.LinearEncoding;
+    //     self.renderer.autoClear = false;
+    //     self.renderer.toneMapping = THREE.ReinhardToneMapping;
+    //     self.renderer.toneMappingExposure = 3.5;
+    //     self.renderer.domElement.style.overflow = "hidden";
+    //     self.domContainer.appendChild(self.renderer.domElement);
+
+    //     window.addEventListener('resize', onWindowResize);
+    //     function onWindowResize() {
+
+    //         const aspect = self.domContainer.offsetWidth / self.domContainer.offsetHeight;
+    //         self.camera.aspect = aspect;
+    //         self.camera.updateProjectionMatrix();
+
+
+    //         self.target.setSize(self.domContainer.offsetWidth, self.domContainer.offsetHeight);
+    //         self.depthTarget.setSize(self.domContainer.offsetWidth, self.domContainer.offsetHeight);
+    //         self.renderer.setSize(self.domContainer.offsetWidth, self.domContainer.offsetHeight);
+    //         self.labelRenderer.setSize(self.domContainer.offsetWidth, self.domContainer.offsetHeight);
+    //     }
+    //     setTimeout(onWindowResize, 1000);
+    // }
+
+    // initLabelRenderer() {
+    //     this.labelRenderer = new CSS3DRenderer();
+    //     this.labelRenderer.setSize(this.domContainer.offsetWidth, this.domContainer.offsetHeight);
+    //     this.labelRenderer.domElement.style.position = 'absolute';
+    //     this.labelRenderer.domElement.style.top = '0px';
+    //     this.labelRenderer.domElement.style.pointerEvents = 'none';
+    //     document.body.appendChild(this.labelRenderer.domElement);
+    // }
 
     initStats() {
         this.stats = new Stats();
@@ -244,15 +244,15 @@ class Map {
     }
 
 
-    initCamera() {
-        const camera = new THREE.PerspectiveCamera(30, this.domContainer.offsetWidth / this.domContainer.offsetHeight, 0.01, 50000000);
-        camera.position.set(40000000, 0, 0);
-        camera.up.set(0, 0, 1)
-        camera.lookAt(new THREE.Vector3(-0, 0, 10000));
-        camera.updateProjectionMatrix();
+    // initCamera() {
+    //     const camera = new THREE.PerspectiveCamera(30, this.domContainer.offsetWidth / this.domContainer.offsetHeight, 0.01, 50000000);
+    //     camera.position.set(40000000, 0, 0);
+    //     camera.up.set(0, 0, 1)
+    //     camera.lookAt(new THREE.Vector3(-0, 0, 10000));
+    //     camera.updateProjectionMatrix();
 
-        return camera;
-    }
+    //     return camera;
+    // }
 
     
 
@@ -269,6 +269,8 @@ class Map {
 
 
     initController() {
+        if (!this.camera) return null;
+
         const self = this;
         self.controller = new Controller(self.camera, self.domContainer, self);
         self.selectController = new SelectController(self.camera, self.domContainer, self)
@@ -320,6 +322,7 @@ class Map {
             }
         });
 
+        console.log("Controls initialized");
     }
 
 
@@ -333,6 +336,13 @@ class Map {
         this.planet.resumeRendering();
         this.layerManager.resumeRendering();
     }
+
+    update() {
+        this.controller.update()
+        this.camera.updateMatrixWorld();
+        frustum.setFromProjectionMatrix(mat.multiplyMatrices(this.camera.projectionMatrix, this.camera.matrixWorldInverse));
+    }
+
     startAnimation() {
         var self = this;
 
@@ -341,6 +351,8 @@ class Map {
 
             if (!self.pause) {
 
+                console.log("Animating")
+
                 self.controller.update();
 
                 frustum.setFromProjectionMatrix(mat.multiplyMatrices(self.camera.projectionMatrix, self.camera.matrixWorldInverse));
@@ -348,41 +360,41 @@ class Map {
 
                 self.camera.updateMatrixWorld();
 
-                self.renderer.setRenderTarget(self.target);
+                // self.renderer.setRenderTarget(self.target);
                 self.renderer.render(self.scene, self.camera);
 
 
-                self.depthPassMaterial.uniforms.tDepth.value = self.target.depthTexture;
+                // self.depthPassMaterial.uniforms.tDepth.value = self.target.depthTexture;
 
                 /// post params
-                self.postMaterial.uniforms.tDiffuse.value = self.target.texture;
-                self.postMaterial.uniforms.tDepth.value = self.target.depthTexture;
-                self.postMaterial.uniforms.cameraNear.value = self.camera.near;
-                self.postMaterial.uniforms.cameraFar.value = self.camera.far;
-                self.postMaterial.uniforms.radius.value = 6356752.3142;
-                self.postMaterial.uniforms.xfov.value = 2 * Math.atan(Math.tan(self.camera.fov * Math.PI / 180 / 2) * self.camera.aspect) * 180 / Math.PI;
-                self.postMaterial.uniforms.yfov.value = self.camera.fov;
-                self.postMaterial.uniforms.planetPosition.value = self.planet.position;
-                self.postMaterial.uniforms.nonPostCameraPosition.value = self.camera.position;
+                // self.postMaterial.uniforms.tDiffuse.value = self.target.texture;
+                // self.postMaterial.uniforms.tDepth.value = self.target.depthTexture;
+                // self.postMaterial.uniforms.cameraNear.value = self.camera.near;
+                // self.postMaterial.uniforms.cameraFar.value = self.camera.far;
+                // self.postMaterial.uniforms.radius.value = 6356752.3142;
+                // self.postMaterial.uniforms.xfov.value = 2 * Math.atan(Math.tan(self.camera.fov * Math.PI / 180 / 2) * self.camera.aspect) * 180 / Math.PI;
+                // self.postMaterial.uniforms.yfov.value = self.camera.fov;
+                // self.postMaterial.uniforms.planetPosition.value = self.planet.position;
+                // self.postMaterial.uniforms.nonPostCameraPosition.value = self.camera.position;
 
 
-                self.camera.getWorldDirection(self.postMaterial.uniforms.viewCenterFar.value).normalize();
-                self.postMaterial.uniforms.up.value = self.camera.up.normalize();
-                self.postMaterial.uniforms.right.value.crossVectors(self.camera.up, self.postMaterial.uniforms.viewCenterFar.value);
-                self.postMaterial.uniforms.viewCenterFar.value.multiplyScalar(self.camera.far).add(self.camera.position);
+                // self.camera.getWorldDirection(self.postMaterial.uniforms.viewCenterFar.value).normalize();
+                // self.postMaterial.uniforms.up.value = self.camera.up.normalize();
+                // self.postMaterial.uniforms.right.value.crossVectors(self.camera.up, self.postMaterial.uniforms.viewCenterFar.value);
+                // self.postMaterial.uniforms.viewCenterFar.value.multiplyScalar(self.camera.far).add(self.camera.position);
 
-                self.postMaterial.uniforms.heightAboveSeaLevel.value = self.camera.position.length() - 6356752.3142;
+                // self.postMaterial.uniforms.heightAboveSeaLevel.value = self.camera.position.length() - 6356752.3142;
 
                 
-                self.depthPassMaterial.uniforms.cameraNear.value = self.camera.near;
-                self.depthPassMaterial.uniforms.cameraFar.value = self.camera.far;
+                // self.depthPassMaterial.uniforms.cameraNear.value = self.camera.near;
+                // self.depthPassMaterial.uniforms.cameraFar.value = self.camera.far;
 
-                self.renderer.setRenderTarget(self.depthTarget);
-                self.renderer.render(self.depthScene, self.postCamera);
+                // self.renderer.setRenderTarget(self.depthTarget);
+                // self.renderer.render(self.depthScene, self.postCamera);
 
-                self.renderer.setRenderTarget(null);
-                self.renderer.render(self.postScene, self.postCamera);
-                self.labelRenderer.render(self.scene, self.camera);
+                // self.renderer.setRenderTarget(null);
+                // self.renderer.render(self.postScene, self.postCamera);
+                // self.labelRenderer.render(self.scene, self.camera);
 
                 self.animateCallback?.();
             }
@@ -395,6 +407,7 @@ class Map {
     }
 
     resetCameraNearFar() {
+        if (!this.camera) return;
         const geodeticCameraPosition = this.planet.llhToCartesian.inverse(this.camera.position);
         B.set(geodeticCameraPosition.x * degreeToRadians, geodeticCameraPosition.y * degreeToRadians)
         const distToGround = geodeticCameraPosition.z - this.planet.getTerrainElevation(B);
