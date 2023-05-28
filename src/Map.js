@@ -26,6 +26,7 @@ const A = new THREE.Vector3();
 const B = new THREE.Vector3();
 const loader = new THREE.TextureLoader();
 const degreeToRadians = Math.PI / 180;
+const screenPixelRaycastPointer = new THREE.Vector2();
 
 
 class Map {
@@ -49,6 +50,7 @@ class Map {
         // this.resetLogDepthBuffer();
         this.selectController = null;
         this.animateCallback = null;
+        this.ceObject = null;
 
         // if(properties.debug){
         //     this.initStats();
@@ -57,7 +59,6 @@ class Map {
         this.initPlanet();
         this.initController();
         this.scene.add(this.planet);
-        console.log("DBS Added planet")
         //this.initStats();
         // this.setupRenderTarget();
         // this.setupPost();
@@ -462,35 +463,36 @@ class Map {
         this.setCameraUp();
     }
     
-
+    /**
+     * This method used to raycast against a depth buffer, but to make Map
+     * work with react-three-fiber (where having a second depth pass woudl
+     * be cumbersome), it's been rewritten to use the raycaster against the scene instead.
+     */
     screenPixelRayCast(x, y, sideEffect) {
-        this.renderer.readRenderTargetPixels(this.depthTarget, x - this.domContainer.offsetLeft, (this.domContainer.offsetHeight - (y - this.domContainer.offsetTop)), 1, 1, depths);
+        if (!this.ceObject) {
+            const ceObject = this.scene.children.find(
+                (child) => child.constructor.name === "ce"
+            );
+            if (!ceObject) return;
 
-        depth16.set(depths[0], depths[1]);
-        let z = depth16.dot(unpacker)
-        z = (z * 0.00390630960555428397039749752041);
-        if (z == 1) {
-            sideEffect.copy(this.camera.position);
-            return;
+            this.ceObject = ceObject;
+            this.raycaster.layers.enable(ceObject.layers.mask);
         }
-        z = Math.pow(2.0, z / (this.logDepthBufFC*0.5))-1;
+
         x = ((x - this.domContainer.offsetLeft) / this.domContainer.offsetWidth) * 2 - 1;
         y = (1 - ((y - this.domContainer.offsetTop) / this.domContainer.offsetHeight)) * 2 - 1;
-        const clipSpacePosition = new THREE.Vector4(x, y, 0.0, 1.0);
-        clipSpacePosition.applyMatrix4(this.camera.projectionMatrixInverse);
-        const viewPosition = new THREE.Vector3(clipSpacePosition.x/clipSpacePosition.w, clipSpacePosition.y/clipSpacePosition.w, clipSpacePosition.z/clipSpacePosition.w);
 
-        viewPosition.normalize();
-        viewPosition.multiplyScalar(z);
-        viewPosition.applyMatrix4(this.camera.matrixWorld);
-        sideEffect.set(viewPosition.x, viewPosition.y, viewPosition.z);
-        
+        screenPixelRaycastPointer.set(x, y)
+        this.raycaster.setFromCamera(screenPixelRaycastPointer, this.camera);
+        const intersects = this.raycaster.intersectObject(this.ceObject);
+        const firstIntersection = intersects[0];
+        if (firstIntersection) {
+            sideEffect.copy(firstIntersection.point)
+        }
     }
     checkCameraCollision() {
         this.planet.heightAboveElevation();
     }
-
-
 
     moveCamera(location, lookAt) {
 
