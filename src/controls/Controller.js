@@ -16,9 +16,7 @@ class Controller {
 	}
 
     _handleEvent(eventName, e){
-        if (this.next && typeof this.next._handleEvent === 'function') {
-            this.next._handleEvent(eventName, e);
-        }
+        // implement in child class
     }
 
     update(){
