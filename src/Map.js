@@ -83,6 +83,8 @@ class Map {
             layer.setRenderer(this.renderer);
             layer.setPlanet(this.planet);
             layer.addToScene(this.scene, this.camera);
+            this.ceObject = layer.tileset;
+            this.raycaster.layers.enable(this.ceObject.layers.mask);
         }
         if (layer instanceof I3SLayer) {
             //layer.setPlanet(this.planet);
@@ -469,15 +471,7 @@ class Map {
      * be cumbersome), it's been rewritten to use the raycaster against the scene instead.
      */
     screenPixelRayCast(x, y, sideEffect) {
-        if (!this.ceObject) {
-            const ceObject = this.scene.children.find(
-                (child) => child.constructor.name === "ce"
-            );
-            if (!ceObject) return;
-
-            this.ceObject = ceObject;
-            this.raycaster.layers.enable(ceObject.layers.mask);
-        }
+        if (!this.ceObject) return;
 
         x = ((x - this.domContainer.offsetLeft) / this.domContainer.offsetWidth) * 2 - 1;
         y = (1 - ((y - this.domContainer.offsetTop) / this.domContainer.offsetHeight)) * 2 - 1;
