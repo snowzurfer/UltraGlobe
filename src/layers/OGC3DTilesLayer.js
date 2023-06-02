@@ -208,6 +208,9 @@ class OGC3DTilesLayer extends Layer {
         this.scene = scene;
         this.camera = camera;
         scene.add(this.tileset);
+        // Rotate the tileset by 90 degrees on the X axis and the Z axis
+        this.tileset.rotation.x = -Math.PI / 2;
+        this.tileset.rotation.z = -Math.PI / 2;
         const self = this;
         self.updateInterval = setIntervalAsync(function () {
             if (!self.pause) {
