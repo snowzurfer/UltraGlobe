@@ -49,6 +49,7 @@ class Map {
         this.camera = properties.camera;
         // this.resetLogDepthBuffer();
         this.selectController = null;
+        this.zoomController = null;
         this.animateCallback = null;
         this.ceObject = null;
 
@@ -277,10 +278,11 @@ class Map {
         const self = this;
         self.controller = new Controller(self.camera, self.domContainer, self);
         self.selectController = new SelectController(self.camera, self.domContainer, self)
+        self.zoomController = new ZoomController(self.camera, self.domContainer, self);
         self.controller.append(self.selectController);
         self.controller.append(new PanController(self.camera, self.domContainer, self));
         self.controller.append(new RotateController(self.camera, self.domContainer, self));
-        self.controller.append(new ZoomController(self.camera, self.domContainer, self));
+        self.controller.append(self.zoomController);
         
         self.domContainer.addEventListener('mousedown', (e) => {
             if (!!self.controller && !self.pause) self.controller.event('mousedown', e);
@@ -426,16 +428,14 @@ class Map {
         this.logDepthBufFC = 2.0 / ( Math.log( this.camera.far + 1.0 ) / Math.log(2.0) );
     }
     moveCameraAboveSurface() {
-        let geodeticCameraPosition = this.planet.llhToCartesian.inverse(this.camera.position);
-        //A.copy(this.camera.position).sub(this.planet.center);
-        //A.normalize();
-        B.set(geodeticCameraPosition.x * degreeToRadians, geodeticCameraPosition.y * degreeToRadians);
+        let geoCameraPos = this.planet.convertCartesianToGeo(this.camera.position.toArray());
+        B.set(geoCameraPos[0] * degreeToRadians, geoCameraPos[1] * degreeToRadians);
 
-        const distToGround = geodeticCameraPosition.z - this.planet.getTerrainElevation(B);
+        const distToGround = geoCameraPos.z - this.planet.getTerrainElevation(B);
         if (distToGround < 10) {
-            geodeticCameraPosition.z += (10 - distToGround);
-            geodeticCameraPosition = this.planet.llhToCartesian.forward(geodeticCameraPosition);
-            this.camera.position.set(geodeticCameraPosition.x, geodeticCameraPosition.y, geodeticCameraPosition.z);
+            geoCameraPos.z += (10 - distToGround);
+            geoCameraPos = this.planet.convertGeoToCartesian(geoCameraPos);
+            this.camera.position.fromArray(geoCameraPos);
         }
     }
     setCameraUp() {
@@ -478,6 +478,16 @@ class Map {
 
         screenPixelRaycastPointer.set(x, y)
         this.raycaster.setFromCamera(screenPixelRaycastPointer, this.camera);
+
+        // Leftover code from when we were raycasting against the WSG84 ellipsoid, for testing
+        // const intersection = new THREE.Vector3();
+        // const dist = this.zoomController.distEllipsoid(this.raycaster.ray.origin, this.raycaster.ray.direction, this.planet.a, intersection);
+
+        // if (dist < 0) return;
+
+        // console.log("Intersection: ", intersection, "dist: ", dist);
+
+        // sideEffect.copy(intersection);
         const intersects = this.raycaster.intersectObject(this.ceObject);
         const firstIntersection = intersects[0];
         if (firstIntersection) {

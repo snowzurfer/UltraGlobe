@@ -11,13 +11,13 @@ const tempPointF = new THREE.Vector3();
 const tempPointG = new THREE.Vector3();
 const quaternion = new THREE.Quaternion();
 const lonlat = new THREE.Vector2();
-var pointer1;
-var pointer2;
-var pointer3;
-var pointer4;
-var pointer5;
+let pointer1;
+let pointer2;
+let pointer3;
+let pointer4;
+let pointer5;
 
-var wgs84MajorMinorRatio = new THREE.Vector3(1,1,6378137.0 / 6356752.3142);
+let wgs84MajorMinorRatio = new THREE.Vector3(1,6378137.0 / 6356752.3142 ,1);
 
 class ZoomController extends Controller {
     constructor(camera, domElement, map) {
@@ -85,25 +85,21 @@ class ZoomController extends Controller {
     zoomAction() {
 
         this.map.screenPixelRayCast(this.zoomLocation.x, this.zoomLocation.y, this.mouseRayCast);
-        // calculate pointOnGlobe and distToGlobeSurface before zoom
-        pointer1 = Math.tan(this.camera.fov * 0.5 * 0.0174533) * this.camera.near * 2;
-        pointer2 = pointer1 / this.dom.clientHeight * this.dom.clientWidth;
-        pointer2 = (((this.zoomLocation.x - this.dom.offsetLeft) / this.dom.clientWidth) - 0.5) * pointer2;
-        pointer1 = (1 - ((this.zoomLocation.y - this.dom.offsetTop) / this.dom.clientHeight) - 0.5) * pointer1;
-
-        tempPointA.set(pointer2, pointer1, - this.camera.near).normalize().applyEuler(this.camera.rotation).normalize();
-
-        //const distEllipsoid = this.distEllipsoid(this.camera.position, tempPointA, this.planet.a)
+        const x = ((this.zoomLocation.x - this.dom.offsetLeft) / this.dom.offsetWidth) * 2 - 1;
+        const y = (1 - ((this.zoomLocation.y - this.dom.offsetTop) / this.dom.offsetHeight)) * 2 - 1;
+        tempPointA.set(x, y, -1).unproject(this.camera);
+        // Then, to get the direction from the camera to this point:
+        tempPointA.sub(this.camera.position).normalize();
+        
         const distElevation = this.mouseRayCast.distanceTo(this.camera.position);
-        const lonlatheight= this.planet.llhToCartesian.inverse(this.mouseRayCast);
-        const heightAboveEllipsoid = lonlatheight.z;
-        //var datum = distEllipsoid - distElevation;
+        const lonlatheight = this.planet.convertCartesianToGeo(this.mouseRayCast.toArray());
+        const heightAboveEllipsoid = lonlatheight[2];
         if (!distElevation || distElevation < 0) {
             this.simpleZoom(this.zoom);
             return;
         }
+        // Save camera position before zoom and add 
         tempPointC.copy(this.camera.position).add(tempPointB.copy(tempPointA).multiplyScalar(distElevation));
-
 
         tempPointE.copy(this.camera.position);
 
@@ -118,18 +114,9 @@ class ZoomController extends Controller {
             return;
         }
 
-
         tempPointB.copy(this.camera.position).add(tempPointA.multiplyScalar(pointer1));
         quaternion.setFromUnitVectors(tempPointB.normalize(), tempPointA.copy(tempPointC).normalize());
         this.camera.position.applyQuaternion(quaternion);
-        pointer3 = this.camera.position.distanceTo(tempPointC);
-
-        /* if ((pointer3 <= distElevation && this.zoom > 0) || (pointer3 >= distElevation && this.zoom < 0)) {
-            this.camera.position.copy(tempPointE);
-            this.simpleZoom(this.zoom);
-            return;
-        } */
-
 
         this.camera.getWorldDirection(tempPointA).applyQuaternion(quaternion);
         tempPointB.crossVectors(tempPointA, this.camera.position);
@@ -218,7 +205,7 @@ class ZoomController extends Controller {
             return (-pointer3 - Math.sqrt(pointer4)) / (2.0 * pointer2);
         }
     }
-    distEllipsoid(origin, direction, radius) {
+    distEllipsoid(origin, direction, radius, intersection) {
         tempPointF.copy(origin).multiply(wgs84MajorMinorRatio);
         tempPointG.copy(direction).multiply(wgs84MajorMinorRatio).normalize();
         tempPointD.copy(tempPointF);
@@ -232,12 +219,16 @@ class ZoomController extends Controller {
         else {
             tempPointD.copy(tempPointG).multiplyScalar((-pointer3 - Math.sqrt(pointer4)) / (2.0 * pointer2)).add(tempPointF);
             tempPointD.divide(wgs84MajorMinorRatio);
+
+            if (intersection) {
+                intersection.copy(tempPointD);
+            }
+
             return tempPointD.distanceTo(origin);
         }
     }
 
     straighten() {
-
         this.camera.getWorldDirection(tempPointD).normalize();
 
         tempPointE.crossVectors(this.camera.up.normalize(), tempPointD);

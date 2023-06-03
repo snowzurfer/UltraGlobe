@@ -62,6 +62,22 @@ class Planet extends Object3D {
 
     }
 
+    convertCartesianToGeo(cartesian) {
+        const converted = this.llhToCartesian.inverse([
+            cartesian[2],
+            cartesian[0],
+            cartesian[1]
+        ])
+
+        return converted;
+    }
+
+    convertGeoToCartesian(geo) {
+        const converted = this.llhToCartesian.forward(geo)
+
+        return [converted[1], converted[2], converted[0]];
+    }
+
     /**
      * this method returns all the leaf tiles that interact with the given lon/lat bounds
      */
