@@ -53,7 +53,7 @@ class SelectController extends Controller {
             const distance = Math.sqrt(Math.pow(this.downLocation.x - upLocation.x,2)+Math.pow(this.downLocation.y - upLocation.y,2))
             if(distance<5){
                 this.select(upLocation);
-                this.selectCallback?.(new THREE.Vector2(e.clientX, e.clientY));
+                this.selectCallback?.(upLocation);
             }
         }
     }

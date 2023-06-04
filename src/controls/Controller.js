@@ -6,6 +6,7 @@ class Controller {
 		this.planet = map.planet;
 		this.map = map;
 		this.camera = camera;
+        this.active = true;
     }
 
     event(eventName, e){
@@ -20,6 +21,8 @@ class Controller {
     }
 
     update(){
+        if (!this.active) return;
+
         this._update();
         if(!!this.next){
 			this.next.update();

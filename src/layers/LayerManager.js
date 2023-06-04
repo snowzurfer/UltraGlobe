@@ -65,5 +65,19 @@ class LayerManager{
     removeListener(key){
         delete this.listeners[key];
     }
+
+    dispose() {
+        this.layers.forEach(layer => {
+            if (layer.dispose) {
+                layer.dispose();
+            }
+        });
+        this.layers = [];
+
+        for (const element in this.listeners) {
+            delete this.listeners[element];
+        }
+    }
+
 }
 export{LayerManager, LAYERS_CHANGED}

@@ -50,6 +50,7 @@ class Map {
         // this.resetLogDepthBuffer();
         this.selectController = null;
         this.zoomController = null;
+        this.panController = null;
         this.animateCallback = null;
         this.ceObject = null;
 
@@ -72,6 +73,14 @@ class Map {
         this.raycaster = new THREE.Raycaster();
 
         this.selection = {};
+    }
+
+    dispose() {
+        this.layerManager?.dispose();
+        this.planet?.removeFromParent();
+        if (this.planet?.dispose) {
+            this.planet.dispose();
+        }
     }
 
     setLayer(layer, index) {
@@ -280,7 +289,8 @@ class Map {
         self.selectController = new SelectController(self.camera, self.domContainer, self)
         self.zoomController = new ZoomController(self.camera, self.domContainer, self);
         self.controller.append(self.selectController);
-        self.controller.append(new PanController(self.camera, self.domContainer, self));
+        self.panController = new PanController(self.camera, self.domContainer, self);
+        self.controller.append(self.panController);
         self.controller.append(new RotateController(self.camera, self.domContainer, self));
         self.controller.append(self.zoomController);
         
