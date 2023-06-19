@@ -425,11 +425,11 @@ class Map {
         if (!this.camera) return;
         const geodeticCameraPosition = this.planet.llhToCartesian.inverse(this.camera.position);
         B.set(geodeticCameraPosition.x * degreeToRadians, geodeticCameraPosition.y * degreeToRadians)
-        const distToGround = geodeticCameraPosition.z - this.planet.getTerrainElevation(B);
+        // const distToGround = geodeticCameraPosition.z - this.planet.getTerrainElevation(B);
 
         this.camera.near = 1;
         const distanceToHorizon = Math.sqrt(2 * this.planet.a * Math.abs(geodeticCameraPosition.z) + geodeticCameraPosition.z * geodeticCameraPosition.z); // estimation
-        this.camera.far = Math.max(3000000, distanceToHorizon * 10);
+        this.camera.far = distanceToHorizon * 2;
         this.camera.updateProjectionMatrix();
         this.resetLogDepthBuffer();
     }
